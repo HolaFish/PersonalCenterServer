@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fxsh.task.mappers.TaskMapper">
+    <resultMap id="taskVO" type="com.fxsh.task.vo.TaskVO">
+        <id property="id" column="id"/>
+        <result property="allDay" column="is_allday"/>
+        <association property="createdBy" select="com.fxsh.auth.mappers.UserMapper.findUserVOById" column="created_by"/>
+        <collection property="executors" select="findExecutorsByTaskId" column="id"/>
+        <collection property="customers" select="findCustomersByTaskId" column="id"/>
+    </resultMap>
+    <resultMap id="taskSummary" type="com.fxsh.task.vo.TaskVO">
+        <id property="id" column="id"/>
+        <result property="allDay" column="is_allday"/>
+    </resultMap>
+    <select id="selectTaskVO" resultMap="taskVO">
+        select t.*,tt.name as task_type_name, tt.color as color, d.name as position_name
+        from t_b_task t
+            join t_b_task_type tt on t.task_type = tt.id
+            left join t_m_dictionary d on t.position = d.id
+        where t.id = #{id} and t.is_deleted = 0;
+    </select>
+
+    <select id="findExecutorsByTaskId" resultType="com.fxsh.auth.vo.UserVO">
+        select u.id,u.user_name, u.email, u.phone_number, u.avatar, u.dept_id, u.company_id,u.position
+        from t_b_task t left join t_b_task_executors te on t.id = te.task_id
+                        join t_m_user u on te.user_id = u.id
+        where t.id = #{id} and t.is_deleted = 0 and te.is_deleted = 0;
+    </select>
+
+    <select id="findCustomersByTaskId" resultType="com.fxsh.auth.vo.UserVO">
+        select u.id,u.user_name, u.email, u.phone_number, u.avatar, u.dept_id, u.company_id,u.position
+        from t_b_task t left join t_b_task_customers tc on t.id = tc.task_id
+                        join t_m_user u on tc.customer_id = u.id
+        where t.id = #{id} and t.is_deleted = 0 and tc.is_deleted = 0;
+    </select>
+
+    <select id="findSummaryTaskListByExecutorId" resultMap="taskSummary">
+        select
+            t.id,
+            t.name,
+            t.task_type,
+            t.start_date,
+            t.end_date,
+            t.start_time,
+            t.end_time,
+            t.is_allday,
+            tt.color,
+            tt.name as task_type_name
+        from
+            t_b_task t
+                join t_b_task_executors tc on
+                t.id = tc.task_id
+                join t_b_task_type tt on t.task_type = tt.id
+        where
+            t.is_deleted = 0
+          and tc.is_deleted = 0
+          and tc.user_id = #{executorId}
+          and t.start_date &lt;= #{endDate}
+          and t.end_date >= #{startDate};
+    </select>
+
+    <select id="findSummaryTaskListByCustomerId" resultMap="taskSummary">
+        select
+            t.id,
+            t.name,
+            t.task_type,
+            t.start_date,
+            t.end_date,
+            t.start_time,
+            t.end_time,
+            t.is_allday,
+            tt.color,
+            tt.name as task_type_name
+        from
+            t_b_task t
+                join t_b_task_customers tc on
+                t.id = tc.task_id
+                join t_b_task_type tt on t.task_type = tt.id
+        where
+            t.is_deleted = 0
+          and tc.is_deleted = 0
+          and tc.customer_id = #{customerId}
+          and t.start_date &lt;= #{endDate}
+          and t.end_date >= #{startDate};
+    </select>
+</mapper>
